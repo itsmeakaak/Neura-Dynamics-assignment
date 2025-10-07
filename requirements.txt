@@ -1,8 +1,6 @@
 langchain>=0.2
 langgraph>=0.2
-langchain-openai>=0.1
-langchain-community>=0.2
-langchain-text-splitters>=0.2
+langsmith>=0.1
 qdrant-client>=1.9
 langchain-qdrant>=0.1
 pypdf>=4
@@ -10,4 +8,7 @@ streamlit>=1.36
 python-dotenv>=1.0
 pytest>=8
 requests>=2
-langsmith>=0.1
+# zero-cost local LLM + embeddings so I don't get charged
+langchain-ollama>=0.1
+langchain-huggingface>=0.1
+sentence-transformers>=3
