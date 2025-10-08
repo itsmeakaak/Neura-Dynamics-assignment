@@ -10,10 +10,20 @@ load_dotenv(override=True)
 
 # ---- Qdrant ----
 def get_qdrant_client() -> QdrantClient:
-    location = os.getenv("QDRANT_LOCATION", ":memory:")  # in-memory is valid for local dev
+    # 1) If remote URL provided, use it
+    url = os.getenv("QDRANT_URL")
     api_key = os.getenv("QDRANT_API_KEY")
-    if api_key:
-        return QdrantClient(location=location, api_key=api_key)
+    if url:
+        return QdrantClient(url=url, api_key=api_key)
+
+    # 2) Prefer local persistent path if provided
+    qdrant_path = os.getenv("QDRANT_PATH")
+    if qdrant_path:
+        os.makedirs(qdrant_path, exist_ok=True)
+        return QdrantClient(path=qdrant_path)
+
+    # 3) Fallback: previous behavior (in-memory)
+    location = os.getenv("QDRANT_LOCATION", ":memory:")
     return QdrantClient(location=location)
 
 # ---- Embeddings (local, free) ----
