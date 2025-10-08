@@ -1,33 +1,39 @@
-from pathlib import Path
-from typing import List
+import os
+from dotenv import load_dotenv
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_qdrant import QdrantVectorStore
+from langchain_huggingface import HuggingFaceEmbeddings
 from qdrant_client import QdrantClient
-from .config import get_qdrant_client, get_embeddings
-import os
+from langchain_qdrant import QdrantVectorStore
 
-COLLECTION = os.getenv("QDRANT_COLLECTION", "nd_pdf_collection")
+COLLECTION = "nd_pdf_collection"
+PDF_PATH = "data/sample.pdf"
 
-def load_and_split(pdf_path: Path):
-    loader = PyPDFLoader(str(pdf_path))  # PDF → Documents
+def load_chunks(path=PDF_PATH):
+    loader = PyPDFLoader(path)
     docs = loader.load()
-    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=120)
+    splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
     return splitter.split_documents(docs)
 
-def build_store(client: QdrantClient, chunks: List):
-    embeddings = get_embeddings()  # local HF embeddings
-    return QdrantVectorStore.from_documents(
-        chunks,
-        embedding=embeddings,
-        client=client,
-        collection_name=COLLECTION,
-    )
+def get_embeddings():
+    model_name = os.getenv("HF_EMBEDDINGS_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+    return HuggingFaceEmbeddings(model_name=model_name)
+
+def build_store(chunks):
+    # Use Qdrant **local mode** (no server, no cost)
+    # e.g. QdrantClient(":memory:") / QdrantClient(location=":memory:")
+    # Docs: local mode examples. :contentReference[oaicite:0]{index=0}
+    location = os.getenv("QDRANT_LOCATION", ":memory:")
+    client = QdrantClient(location=location)
+    embeddings = get_embeddings()
+    store = QdrantVectorStore(client=client, collection_name=COLLECTION, embeddings=embeddings)
+    store.add_documents(chunks)
+    return store
 
 if __name__ == "__main__":
-    pdf = Path("data/sample.pdf")
-    assert pdf.exists(), "Put your PDF at data/sample.pdf"
-    chunks = load_and_split(pdf)
-    client = get_qdrant_client()
-    build_store(client, chunks)
-    print(f"Ingested {len(chunks)} chunks into '{COLLECTION}'.")
+    load_dotenv()
+    if not os.path.exists(PDF_PATH):
+        raise FileNotFoundError(f"Missing {PDF_PATH}. Add a PDF and retry.")
+    chunks = load_chunks()
+    build_store(chunks)
+    print(f"Ingested {len(chunks)} chunks into '{COLLECTION}'")
