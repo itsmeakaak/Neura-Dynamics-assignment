@@ -2,11 +2,11 @@ import streamlit as st
 from pathlib import Path
 import subprocess, sys, os
 
-# Robust import: works whether Streamlit's CWD is repo root or src/
-# (Python searches the script dir first; we add repo root if needed.)
-# Docs: sys.path init (first entry = script dir). 
-# Streamlit chat APIs used below.
-# Refs: python docs on sys.path; Streamlit chat docs.
+# NEW: load .env so Streamlit sees your keys
+from dotenv import load_dotenv
+load_dotenv(override=True)  # ensure values from .env are available
+
+# Robust import whether CWD is repo root or src/
 try:
     from src.graph import build_graph
 except ModuleNotFoundError:
@@ -16,8 +16,6 @@ except ModuleNotFoundError:
         from src.graph import build_graph
     except ModuleNotFoundError:
         from graph import build_graph  # fallback if launched from src/
-# sys.path behavior: :contentReference[oaicite:0]{index=0}
-# st.chat_message / st.chat_input: :contentReference[oaicite:1]{index=1}
 
 st.set_page_config(page_title="Neura Dynamics — Weather + PDF RAG", page_icon="🤖", layout="centered")
 st.title("Neura Dynamics — Weather + PDF RAG (LangGraph)")
@@ -28,9 +26,7 @@ with st.expander("1) Ingest PDF", expanded=True):
     if not pdf_ok:
         st.error("Missing `data/sample.pdf`. Please add the file.")
     if st.button("Ingest now", disabled=not pdf_ok):
-        # Use the current Python interpreter to avoid venv/path issues
-        cmd = [sys.executable, "-m", "src.ingest"]
-        out = subprocess.run(cmd, capture_output=True, text=True)
+        out = subprocess.run([sys.executable, "-m", "src.ingest"], capture_output=True, text=True)
         st.write("```bash\n" + (out.stdout or out.stderr) + "\n```")
         if out.returncode == 0:
             st.success("Ingested chunks into Qdrant (in-memory).")
