@@ -1,5 +1,8 @@
 from typing import TypedDict, Literal, Optional
 import re
+from dotenv import load_dotenv
+load_dotenv(override=True)  # make sure env is present when graph imports
+
 from langgraph.graph import StateGraph, END
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
@@ -34,7 +37,6 @@ def decide(state: State) -> State:
     route = _rule_route(q)
 
     if route is None:
-        # Local LLM fallback (Ollama) to classify as 'weather' or 'rag'
         prompt = ChatPromptTemplate.from_messages([
             ("system", "Classify the user's query strictly as 'weather' or 'rag'. Reply with one word only."),
             ("human", "{q}")
