@@ -10,7 +10,7 @@ import os
 COLLECTION = os.getenv("QDRANT_COLLECTION", "nd_pdf_collection")
 
 def get_vectorstore(client: QdrantClient) -> QdrantVectorStore:
-    embeddings = get_embeddings()  # local HF embeddings
+    embeddings = get_embeddings()
     return QdrantVectorStore(
         client=client,
         collection_name=COLLECTION,
@@ -39,6 +39,12 @@ def make_rag_chain(vs: QdrantVectorStore):
 
 def answer_from_pdf(question: str) -> str:
     client = get_qdrant_client()
+    # Helpful error if user forgot to ingest
+    try:
+        client.get_collection(collection_name=COLLECTION)
+    except Exception:
+        return "No PDF chunks found. Click **Ingest now** first."
+
     vs = get_vectorstore(client)
     chain = make_rag_chain(vs)
     return chain.invoke(question)
