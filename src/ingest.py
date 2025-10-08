@@ -20,13 +20,11 @@ def get_embeddings():
     return HuggingFaceEmbeddings(model_name=model_name)
 
 def build_store(chunks):
-    # Use Qdrant **local mode** (no server, no cost)
-    # e.g. QdrantClient(":memory:") / QdrantClient(location=":memory:")
-    # Docs: local mode examples. :contentReference[oaicite:0]{index=0}
+    # true local, zero-cost store (no server)
     location = os.getenv("QDRANT_LOCATION", ":memory:")
-    client = QdrantClient(location=location)
+    client = QdrantClient(location=location)  # ":memory:" = in-memory mode. :contentReference[oaicite:1]{index=1}
     embeddings = get_embeddings()
-    store = QdrantVectorStore(client=client, collection_name=COLLECTION, embeddings=embeddings)
+    store = QdrantVectorStore(client=client, collection_name=COLLECTION, embedding=embeddings)
     store.add_documents(chunks)
     return store
 
